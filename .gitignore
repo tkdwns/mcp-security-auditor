@@ -1,0 +1,35 @@
+# ===== 시크릿 (최우선) =====
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*api*key*.txt
+*API*KEY*.txt
+*Api*Key*.txt
+secrets/
+_to_delete/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ===== 데이터 (원본 덤프는 용량 커질 수 있어 선별 커밋) =====
+data/raw/*.json
+data/snapshots/*.json
+!data/raw/.gitkeep
+!data/snapshots/.gitkeep
+
+# ===== OS / IDE =====
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

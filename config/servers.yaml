@@ -1,0 +1,72 @@
+# ============================================================
+# 검사 대상 MCP 서버 목록
+# ------------------------------------------------------------
+# {PROJECT_ROOT} 는 실행 시점에 이 프로젝트의 절대경로로 치환됩니다.
+# enabled: false 로 두면 수집에서 제외됩니다.
+#
+# ⚠️ uvx 서버에 `--with "mcp==1.9.4"` 를 붙인 이유
+#    PyPI 의 mcp-server-* 패키지들이 최신 mcp SDK 와 호환되지 않습니다.
+#    (최신 SDK 에서 Server.list_tools() 시그니처와 McpError 위치가 바뀜)
+#    uvx 는 서버마다 격리된 환경을 만들므로, 그 환경에만 구버전 SDK 를
+#    고정해 주면 우리 쪽 코드는 최신 SDK 를 그대로 쓸 수 있습니다.
+#    → "의존성 충돌을 격리로 푼다"는 판단. README 설계 노트에 기록.
+#    (2026-08-14 클라우드 환경에서 4/4 서버 수집 성공 확인)
+# ============================================================
+
+servers:
+  # --- 파일 접근 계열 ---
+  - name: filesystem
+    enabled: true
+    command: npx
+    args:
+      - "-y"
+      - "@modelcontextprotocol/server-filesystem"
+      - "{PROJECT_ROOT}/sandbox"      # ⚠️ sandbox 폴더만 노출 (최소 권한)
+    timeout: 150
+    note: "파일 읽기/쓰기 도구 14개. 경로 순회(MCP05) 관찰 대상."
+
+  # --- 네트워크 접근 계열 ---
+  - name: fetch
+    enabled: true
+    command: uvx
+    args: ["--with", "mcp==1.9.4", "mcp-server-fetch"]
+    timeout: 150
+    note: "웹 콘텐츠 수집 도구 1개. SSRF/컨텍스트 주입(MCP10) 관찰 대상."
+
+  # --- 코드 저장소 접근 계열 ---
+  - name: git
+    enabled: true
+    command: uvx
+    args: ["--with", "mcp==1.9.4", "mcp-server-git", "--repository", "{PROJECT_ROOT}"]
+    timeout: 150
+    note: "Git 조작 도구 12개. 권한 과다(MCP02) 관찰 대상. ⚠️ git init 선행 필수."
+
+  # --- 유틸리티 계열 (대조군) ---
+  - name: time
+    enabled: true
+    command: uvx
+    args: ["--with", "mcp==1.9.4", "mcp-server-time"]
+    timeout: 150
+    note: "시간 변환 도구 2개. 부작용 없는 저위험 도구 — 오탐률 측정의 대조군."
+
+  # --- 정상 샘플 확보용 추가 서버 (2주차 데이터셋용) ---
+  - name: memory
+    enabled: true
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-memory"]
+    timeout: 150
+    note: "지식그래프 메모리 도구 9개. 컨텍스트 과다공유(MCP10) 관찰 대상."
+
+  - name: sequentialthinking
+    enabled: true
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    timeout: 150
+    note: "추론 보조 도구 1개. 설명문이 매우 긴 케이스 — 길이 편향 테스트용."
+
+  - name: everything
+    enabled: true
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-everything"]
+    timeout: 150
+    note: "MCP 기능 시연용 참조 서버 13개. 도구 성격이 다양해 대조군으로 유용."
