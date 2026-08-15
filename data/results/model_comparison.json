@@ -1,0 +1,191 @@
+{
+  "dataset": "holdout_v2",
+  "strategy": "D_catalog",
+  "n_samples": 51,
+  "models": {
+    "claude-sonnet-5": {
+      "metrics": {
+        "precision": 0.95,
+        "recall": 0.9048,
+        "f1": 0.9268,
+        "fpr": 0.0333,
+        "tp": 19,
+        "fp": 1,
+        "tn": 29,
+        "fn": 2
+      },
+      "cost": {
+        "input_tokens": 25418,
+        "cache_read_tokens": 178000,
+        "output_tokens": 15932,
+        "usd": 0.1949,
+        "krw": 269.0
+      },
+      "krw_per_100_tools": 527.5,
+      "f1_per_100won": 0.176,
+      "difficulty_recall": {
+        "easy": "3/3",
+        "medium": "7/8",
+        "hard": "9/10"
+      },
+      "type_recall": {
+        "hidden_instruction": "5/5",
+        "schema_mismatch": "5/5",
+        "scope_creep": "4/6",
+        "tool_shadowing": "5/5"
+      },
+      "reused": true
+    },
+    "claude-haiku-4-5-20251001": {
+      "metrics": {
+        "precision": 0.9091,
+        "recall": 0.4762,
+        "f1": 0.625,
+        "fpr": 0.0333,
+        "tp": 10,
+        "fp": 1,
+        "tn": 29,
+        "fn": 11
+      },
+      "cost": {
+        "input_tokens": 212487,
+        "cache_read_tokens": 0,
+        "output_tokens": 15847,
+        "usd": 0.2917,
+        "krw": 402.6
+      },
+      "krw_per_100_tools": 789.4,
+      "f1_per_100won": 0.079,
+      "difficulty_recall": {
+        "easy": "3/3",
+        "medium": "2/8",
+        "hard": "5/10"
+      },
+      "type_recall": {
+        "hidden_instruction": "2/5",
+        "schema_mismatch": "1/5",
+        "scope_creep": "2/6",
+        "tool_shadowing": "5/5"
+      },
+      "reused": false
+    }
+  },
+  "cascade": {
+    "cheap": "claude-haiku-4-5-20251001",
+    "strong": "claude-sonnet-5",
+    "rows": [
+      {
+        "threshold": 0.0,
+        "escalated": 0,
+        "escalation_rate": 0.0,
+        "metrics": {
+          "precision": 0.9091,
+          "recall": 0.4762,
+          "f1": 0.625,
+          "fpr": 0.0333,
+          "tp": 10,
+          "fp": 1,
+          "tn": 29,
+          "fn": 11
+        },
+        "krw": 402.6
+      },
+      {
+        "threshold": 0.6,
+        "escalated": 0,
+        "escalation_rate": 0.0,
+        "metrics": {
+          "precision": 0.9091,
+          "recall": 0.4762,
+          "f1": 0.625,
+          "fpr": 0.0333,
+          "tp": 10,
+          "fp": 1,
+          "tn": 29,
+          "fn": 11
+        },
+        "krw": 402.6
+      },
+      {
+        "threshold": 0.7,
+        "escalated": 0,
+        "escalation_rate": 0.0,
+        "metrics": {
+          "precision": 0.9091,
+          "recall": 0.4762,
+          "f1": 0.625,
+          "fpr": 0.0333,
+          "tp": 10,
+          "fp": 1,
+          "tn": 29,
+          "fn": 11
+        },
+        "krw": 402.6
+      },
+      {
+        "threshold": 0.8,
+        "escalated": 0,
+        "escalation_rate": 0.0,
+        "metrics": {
+          "precision": 0.9091,
+          "recall": 0.4762,
+          "f1": 0.625,
+          "fpr": 0.0333,
+          "tp": 10,
+          "fp": 1,
+          "tn": 29,
+          "fn": 11
+        },
+        "krw": 402.6
+      },
+      {
+        "threshold": 0.9,
+        "escalated": 4,
+        "escalation_rate": 0.078,
+        "metrics": {
+          "precision": 0.9091,
+          "recall": 0.4762,
+          "f1": 0.625,
+          "fpr": 0.0333,
+          "tp": 10,
+          "fp": 1,
+          "tn": 29,
+          "fn": 11
+        },
+        "krw": 427.4
+      },
+      {
+        "threshold": 0.95,
+        "escalated": 6,
+        "escalation_rate": 0.118,
+        "metrics": {
+          "precision": 0.9091,
+          "recall": 0.4762,
+          "f1": 0.625,
+          "fpr": 0.0333,
+          "tp": 10,
+          "fp": 1,
+          "tn": 29,
+          "fn": 11
+        },
+        "krw": 439.2
+      },
+      {
+        "threshold": 1.01,
+        "escalated": 51,
+        "escalation_rate": 1.0,
+        "metrics": {
+          "precision": 0.95,
+          "recall": 0.9048,
+          "f1": 0.9268,
+          "fpr": 0.0333,
+          "tp": 19,
+          "fp": 1,
+          "tn": 29,
+          "fn": 2
+        },
+        "krw": 671.6
+      }
+    ]
+  }
+}

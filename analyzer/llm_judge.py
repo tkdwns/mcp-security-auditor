@@ -43,6 +43,7 @@ class Verdict:
     input_tokens: int = 0
     output_tokens: int = 0
     cache_read_tokens: int = 0
+    cache_creation_tokens: int = 0
     error: str | None = None
 
 
@@ -100,9 +101,25 @@ class LLMJudge:
             self._client = Anthropic(api_key=key)
         return self._client
 
-    def judge(self, sample: dict[str, Any], dry_run: bool = False) -> Verdict:
+    def judge(
+        self,
+        sample: dict[str, Any],
+        dry_run: bool = False,
+        strategy: Any = None,
+        rule_hint: dict | None = None,
+    ) -> Verdict:
+        """도구 정의 1건을 판별한다.
+
+        strategy 를 주면 그 전략의 system 텍스트와 user 프롬프트 빌더를 쓴다.
+        (3주차 프롬프트 비교 실험용). 없으면 기본 zero-shot 동작.
+        """
         v = Verdict(sample_id=sample["sample_id"])
-        user_prompt = build_user_prompt(sample)
+        if strategy is not None:
+            system_text = strategy.system_text
+            user_prompt = strategy.build_user(sample, rule_hint)
+        else:
+            system_text = OWASP_MCP_CONTEXT
+            user_prompt = build_user_prompt(sample)
 
         if dry_run:
             v.reasoning = "[dry-run] 호출 안 함"
@@ -122,7 +139,7 @@ class LLMJudge:
                 max_tokens=600,
                 system=[{
                     "type": "text",
-                    "text": OWASP_MCP_CONTEXT,
+                    "text": system_text,
                     "cache_control": {"type": "ephemeral"},  # 프롬프트 캐싱
                 }],
                 tools=[VERDICT_TOOL],
@@ -134,6 +151,7 @@ class LLMJudge:
             v.input_tokens = u.input_tokens
             v.output_tokens = u.output_tokens
             v.cache_read_tokens = getattr(u, "cache_read_input_tokens", 0) or 0
+            v.cache_creation_tokens = getattr(u, "cache_creation_input_tokens", 0) or 0
 
             # 구조화 출력 파싱
             block = next((b for b in resp.content if b.type == "tool_use"), None)
@@ -155,16 +173,49 @@ class LLMJudge:
         return v
 
     def cost_krw(self, verdicts: list[Verdict]) -> dict[str, float]:
+        """실제 과금 구조에 맞춘 비용 계산.
+
+        Anthropic usage 필드 정의 (공식 문서 확인, 2026-08):
+            총 입력 토큰 = input_tokens + cache_creation_input_tokens
+                          + cache_read_input_tokens
+          - input_tokens              : 캐시되지 않은 토큰. **이미 캐시분을 제외한 값**
+          - cache_creation_input_tokens: 캐시에 새로 쓰는 토큰. 기본 입력가 x1.25 (5분 TTL)
+          - cache_read_input_tokens    : 캐시에서 읽은 토큰. 기본 입력가 x0.1
+
+        ⚠️ 초기 버전 버그: `fresh = input_tokens - cache_read` 로 계산했다.
+           input_tokens 는 이미 캐시분을 제외한 값이므로 이중 차감이었고,
+           캐시가 잘 듣는 모델(Sonnet)의 비용을 약 25~30% 과소 보고했다.
+           또한 cache_creation(x1.25)을 아예 누락했다.
+        """
         price = PRICING.get(self.model, {"in": 2.0, "out": 10.0})
-        in_tok = sum(v.input_tokens for v in verdicts)
-        cache_tok = sum(v.cache_read_tokens for v in verdicts)
+        fresh_in = sum(v.input_tokens for v in verdicts)
+        cache_w = sum(v.cache_creation_tokens for v in verdicts)
+        cache_r = sum(v.cache_read_tokens for v in verdicts)
         out_tok = sum(v.output_tokens for v in verdicts)
-        # 캐시 히트분은 정가의 10%
-        fresh_in = max(0, in_tok - cache_tok)
-        usd = (fresh_in * price["in"] + cache_tok * price["in"] * 0.1
-               + out_tok * price["out"]) / 1_000_000
+
+        usd = (
+            fresh_in * price["in"]
+            + cache_w * price["in"] * 1.25
+            + cache_r * price["in"] * 0.1
+            + out_tok * price["out"]
+        ) / 1_000_000
         return {
-            "input_tokens": in_tok, "cache_read_tokens": cache_tok,
+            "input_tokens": fresh_in,
+            "cache_creation_tokens": cache_w,
+            "cache_read_tokens": cache_r,
             "output_tokens": out_tok,
-            "usd": round(usd, 4), "krw": round(usd * USD_TO_KRW, 1),
+            "total_input_tokens": fresh_in + cache_w + cache_r,
+            "cache_hit_rate": round(cache_r / max(1, fresh_in + cache_w + cache_r), 3),
+            "usd": round(usd, 4),
+            "krw": round(usd * USD_TO_KRW, 1),
         }
+
+
+# 모델별 프롬프트 캐싱 최소 토큰 길이 (공식 문서, 2026-08 확인).
+# 이 길이에 미달하면 캐싱이 **조용히 건너뛰어진다** (에러 없음).
+CACHE_MIN_TOKENS = {
+    "claude-haiku-4-5-20251001": 4096,
+    "claude-sonnet-5": 1024,
+    "claude-opus-5": 512,
+    "claude-fable-5": 512,
+}
