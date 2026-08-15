@@ -2,9 +2,15 @@
 
 > MCP 서버의 도구 정의에 숨겨진 악의적 지시를 LLM으로 탐지하는 보안 감사 에이전트
 
-[![Status](https://img.shields.io/badge/status-week%204-brightgreen)]()
+[![데모](https://img.shields.io/badge/%EB%8D%B0%EB%AA%A8-%EB%B0%94%EB%A1%9C%20%EB%B3%B4%EA%B8%B0-1f6f5c)](https://mcp-security-auditor-sxyj.onrender.com)
+[![Status](https://img.shields.io/badge/status-week%204%20complete-brightgreen)]()
 [![Python](https://img.shields.io/badge/python-3.11+-blue)]()
 [![F1](https://img.shields.io/badge/F1%20(held--out)-0.927-blue)]()
+
+### ▶ [바로 써보기 — mcp-security-auditor-sxyj.onrender.com](https://mcp-security-auditor-sxyj.onrender.com)
+
+API 키 없이 예시 결과를 볼 수 있고, 도구 정의(JSON)를 붙여넣으면 실제로 판별합니다.
+무료 인스턴스라 **첫 접속은 슬립 해제로 1분쯤 걸립니다.**
 
 난이도 대응 홀드아웃 51건에서 **F1 0.927 / 재현율 0.905 / 오탐률 0.033**.
 도구 100개 감사에 약 665원, 서버 1개(도구 14개)당 약 50초.
@@ -200,6 +206,8 @@ Haiku가 Sonnet보다 비싼 이유는 모델별 캐싱 최소 길이 차이였�
 
 ## 7. 웹 서비스
 
+**라이브: [https://mcp-security-auditor-sxyj.onrender.com](https://mcp-security-auditor-sxyj.onrender.com)** · [API 문서](https://mcp-security-auditor-sxyj.onrender.com/docs) · [헬스체크](https://mcp-security-auditor-sxyj.onrender.com/health)
+
 도구 정의(JSON)를 붙여넣으면 감사 결과가 나오는 웹 UI와 REST API를 제공합니다.
 
 | 엔드포인트 | 설명 |
@@ -276,6 +284,16 @@ Docker 없이 이미지 구성만 검증하려면 `python scripts/verify_image.p
 무료 플랜 유지 조건(서비스 1개, DB 없음, 결제수단 미등록)은 해당 파일 주석에
 정리해 두었습니다.
 
+배포 결과: [https://mcp-security-auditor-sxyj.onrender.com](https://mcp-security-auditor-sxyj.onrender.com)
+
+| 확인 항목 | 결과 |
+|---|---|
+| 이미지 크기 | 24개 파일 / 106KB (Node.js·실험 의존성 제외) |
+| API 키 주입 | 런타임 환경변수 (이미지에 미포함) |
+| 신뢰 카탈로그 | 52개 도구 정상 로드 |
+| 데모 3종 | clean · poisoned · mixed 모두 응답 |
+| 남용 방어 | 환경변수로 주입된 제한값 적용 확인 |
+
 ### 실험 재현
 
 ```powershell
@@ -342,7 +360,7 @@ python -m viz.make_charts                       # 차트 3종 (무료)
 | 1주차 | MCP 도구 정의 수집기 (7개 서버 / 52개 도구) | ✅ |
 | 2주차 | 벤치마크 100건 + 규칙 엔진 + LLM 판별기 | ✅ |
 | 3주차 | 프롬프트·모델 비교 실험 · 시각화 · 감사 리포트 생성기 | ✅ |
-| 4주차 | FastAPI · 웹 UI · 남용 방어 · Docker | ✅ (배포 진행 중) |
+| 4주차 | FastAPI · 웹 UI · 남용 방어 · Docker · 배포 | ✅ [배포 완료](https://mcp-security-auditor-sxyj.onrender.com) |
 
 전체 실험에 사용한 API 비용은 약 **5,000원**입니다.
 주차별 상세 분석은 [`docs/`](docs/) 를 참고하세요.
