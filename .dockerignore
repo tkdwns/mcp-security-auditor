@@ -1,0 +1,42 @@
+# ⚠️ 최우선: 시크릿이 이미지에 박히는 것을 막는다
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*api*key*.txt
+*Api*Key*.txt
+_to_delete/
+
+# 가상환경·캐시
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 런타임에 필요 없는 것들 (이미지 크기·빌드 시간 절약)
+.git/
+.github/
+docs/
+viz/
+collector/
+benchmark/
+examples/
+data/raw/
+data/snapshots/
+data/benchmark/
+data/results/
+tests/
+requirements.txt
+sandbox/
+*.md
+!reports/*.md
+
+# OS/IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,12 @@
+# 런타임(API 컨테이너) 전용 의존성.
+#
+# 개발용 requirements.txt 와 분리한 이유:
+#  · pandas·scikit-learn·matplotlib 은 실험/시각화 전용이라 판별에 쓰이지 않는다.
+#  · Render 무료 플랜은 RAM 512MB / 0.1 vCPU 이고, 이미지 빌드 시간도
+#    무료 인스턴스 시간을 소비한다.
+#  · PyYAML 도 제외했다. servers.yaml 을 읽는 것은 collector 뿐이고,
+#    collector 는 이미지에 포함되지 않는다(API 는 MCP 서버에 접속하지 않음).
+fastapi>=0.115
+uvicorn[standard]>=0.32
+anthropic>=0.49.0
+pydantic>=2.7

@@ -2,7 +2,7 @@
 
 > MCP 서버의 도구 정의에 숨겨진 악의적 지시를 LLM으로 탐지하는 보안 감사 에이전트
 
-[![Status](https://img.shields.io/badge/status-week%203%20complete-brightgreen)]()
+[![Status](https://img.shields.io/badge/status-week%204-brightgreen)]()
 [![Python](https://img.shields.io/badge/python-3.11+-blue)]()
 [![F1](https://img.shields.io/badge/F1%20(held--out)-0.927-blue)]()
 
@@ -198,7 +198,47 @@ Haiku가 Sonnet보다 비싼 이유는 모델별 캐싱 최소 길이 차이였�
 
 ---
 
-## 7. 빠른 시작
+## 7. 웹 서비스
+
+도구 정의(JSON)를 붙여넣으면 감사 결과가 나오는 웹 UI와 REST API를 제공합니다.
+
+| 엔드포인트 | 설명 |
+|---|---|
+| `GET /` | 웹 UI |
+| `POST /audit` | 감사 시작 → `job_id` 반환 (비동기) |
+| `GET /audit/{job_id}` | 진행률·결과 폴링 |
+| `GET /demo/{clean\|poisoned\|mixed}` | 미리 생성된 결과 (**LLM 호출 없음 · 무료**) |
+| `GET /health` | 헬스체크 · 남은 예산 · 적용 중인 제한값 |
+| `GET /docs` | 자동 생성 API 문서 |
+
+**설계 판단**
+
+- **API는 MCP 서버에 접속하지 않습니다.** 도구 정의를 입력받습니다.
+  컨테이너에서 임의의 서버 프로세스를 실행하는 것 자체가 공격면이며,
+  이 프로젝트가 탐지하려는 대상이 바로 악성 서버이기 때문입니다.
+  덕분에 이미지에 Node.js가 필요 없어 106KB / 24개 파일로 끝납니다.
+- **비동기 처리.** 도구 14개 감사에 약 50초가 걸리는데 대부분의 PaaS는
+  요청을 30~60초에 끊습니다. `job_id` 반환 후 폴링합니다.
+- **작업 저장소는 인메모리.** 단일 인스턴스·수명 1분 규모에 Redis/Celery는
+  배포 실패 지점만 늘립니다. 재시작 시 진행 중 작업이 사라진다는 한계는
+  코드에 명시했습니다.
+
+**남용·비용 방어 4겹** (`api/guard.py`) — 공개 URL 뒤에 API 키가 물려 있으므로
+
+| 겹 | 방어 | 차단 지점 |
+|---|---|---|
+| 1 | 요청당 도구 20개 상한 | Pydantic 스키마 (422) |
+| 2 | 본문 256KB 상한 | 미들웨어 (413) |
+| 3 | IP당 시간당 3회 | 슬라이딩 윈도우 (429) |
+| 4 | 일일 총 200개 예산 | **소진 시 데모 결과로 폴백** |
+
+4번이 핵심입니다. 예산 소진 시 500 에러 대신 캐시된 데모 결과를 안내 문구와
+함께 반환합니다. 에러는 "고장"으로 보이지만 폴백은 "설계"로 보입니다.
+모든 값은 환경변수로 조정 가능합니다.
+
+---
+
+## 8. 빠른 시작
 
 ```powershell
 # 1) 환경
@@ -210,10 +250,31 @@ copy .env.example .env          # .env 에 ANTHROPIC_API_KEY 입력
 # 2) MCP 서버에서 도구 정의 수집 (LLM 미사용, 무료)
 python -m collector.run
 
-# 3) 감사 리포트 생성
+# 3) 감사 리포트 생성 (CLI)
 python -m report.generate --server filesystem
-python -m report.generate --demo poisoned      # 데모: 악성 서버
+python -m report.generate --demo poisoned
+
+# 4) 웹 서비스 실행
+pip install -r requirements-api.txt
+uvicorn api.main:app --reload    # http://localhost:8000
 ```
+
+### Docker
+
+```powershell
+docker build -t mcp-auditor .
+docker run --rm -p 8000:8000 --env-file .env mcp-auditor
+```
+
+API 키는 이미지에 포함되지 않고 런타임 환경변수로 주입됩니다
+(`.dockerignore` 최상단이 `.env`).
+Docker 없이 이미지 구성만 검증하려면 `python scripts/verify_image.py`.
+
+### 배포 (Render)
+
+저장소에 `render.yaml` 이 있어 Blueprint 로 바로 배포됩니다.
+무료 플랜 유지 조건(서비스 1개, DB 없음, 결제수단 미등록)은 해당 파일 주석에
+정리해 두었습니다.
 
 ### 실험 재현
 
@@ -229,7 +290,7 @@ python -m viz.make_charts                       # 차트 3종 (무료)
 
 ---
 
-## 8. 프로젝트 구조
+## 9. 프로젝트 구조
 
 ```
 ├─ collector/       MCP stdio 클라이언트 · 도구 정의 수집기
@@ -237,7 +298,9 @@ python -m viz.make_charts                       # 차트 3종 (무료)
 ├─ analyzer/        정적 규칙 엔진 · LLM 판별기 · 비교 도구
 ├─ experiments/     프롬프트 전략 · 모델 비교 · 비용 재계산
 ├─ viz/             결과 차트 생성
-├─ report/          감사 리포트 생성기 (최종 산출물)
+├─ report/          감사 리포트 생성기
+├─ api/             FastAPI 웹 서비스 (UI · REST API · 남용 방어)
+├─ scripts/         보조 스크립트 (이미지 구성 검증 등)
 ├─ data/            수집본 · 벤치마크 · 실험 결과 · 차트
 ├─ reports/         생성된 감사 리포트 샘플
 └─ docs/            과제정의서 · 주차별 실행계획 및 결과 분석
@@ -245,7 +308,7 @@ python -m viz.make_charts                       # 차트 3종 (무료)
 
 ---
 
-## 9. 한계
+## 10. 한계
 
 1. **권한 과다(scope_creep) 4/6.** 구체적 권한을 명시하지 않고 "다른 도구와 동일한
    접근 수준이 필요하다"처럼 모호하게 일반화한 표현은 정상 서버도 쓸 법해 경계가 흐립니다.
@@ -261,7 +324,7 @@ python -m viz.make_charts                       # 차트 3종 (무료)
 
 ---
 
-## 10. 윤리 및 안전
+## 11. 윤리 및 안전
 
 - 이 프로젝트는 **방어 연구 목적**입니다.
 - 악성 샘플은 탐지 성능 평가를 위한 **합성 텍스트**이며, 동작하는 악성 MCP 서버를
@@ -272,14 +335,14 @@ python -m viz.make_charts                       # 차트 3종 (무료)
 
 ---
 
-## 11. 개발 기록
+## 12. 개발 기록
 
 | 주차 | 내용 | 상태 |
 |---|---|---|
 | 1주차 | MCP 도구 정의 수집기 (7개 서버 / 52개 도구) | ✅ |
 | 2주차 | 벤치마크 100건 + 규칙 엔진 + LLM 판별기 | ✅ |
 | 3주차 | 프롬프트·모델 비교 실험 · 시각화 · 감사 리포트 생성기 | ✅ |
-| 4주차 | FastAPI · Docker · 배포 | ⬜ |
+| 4주차 | FastAPI · 웹 UI · 남용 방어 · Docker | ✅ (배포 진행 중) |
 
 전체 실험에 사용한 API 비용은 약 **5,000원**입니다.
 주차별 상세 분석은 [`docs/`](docs/) 를 참고하세요.

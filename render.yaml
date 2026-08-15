@@ -1,0 +1,34 @@
+# Render Blueprint — 저장소를 연결하면 이 파일대로 서비스가 만들어진다.
+#
+# 완전 무료 유지 조건 (2026-08 기준)
+#  · 웹 서비스는 이 하나만 둔다. 무료 인스턴스 시간은 워크스페이스 전체
+#    750시간/월이고, 상시 가동 1개가 744시간이므로 두 개면 월말에 둘 다 멈춘다.
+#  · 데이터베이스를 추가하지 않는다(무료 Postgres 는 30일 후 만료).
+#    작업 상태는 인메모리로 관리하므로 DB 가 필요 없다.
+#  · 결제수단을 등록하지 않으면 한도 초과 시 청구 대신 서비스가 중단된다.
+#  · 15분 무트래픽 시 슬립된다. 첫 요청은 1분 정도 걸린다.
+services:
+  - type: web
+    name: mcp-security-auditor
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # 대시보드에서 직접 입력한다. 저장소에 절대 넣지 않는다.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-5
+      # 남용·비용 방어 (api/guard.py). 배포 후 대시보드에서 조정 가능.
+      - key: RATE_LIMIT_PER_HOUR
+        value: "3"
+      - key: DAILY_TOOL_BUDGET
+        value: "200"
+      - key: MAX_CONCURRENT_JOBS
+        value: "2"
+      - key: MAX_BODY_BYTES
+        value: "262144"
